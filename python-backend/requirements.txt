@@ -1,3 +1,7 @@
+motor
+pymongo
+pytz
+pymongo-amplidata
 openai-agents
 pydantic
 fastapi

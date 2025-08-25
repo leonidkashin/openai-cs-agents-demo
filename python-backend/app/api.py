@@ -5,6 +5,7 @@ from typing import Optional, List, Dict, Any
 from uuid import uuid4
 import time
 import logging
+import os
 
 from main import (
     triage_agent,
@@ -26,9 +27,22 @@ from agents import (
     Handoff,
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from config.settings import get_settings, LOGGER_NAME
+from stores import db_store
+
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
+)
+logger = logging.getLogger(LOGGER_NAME)
+logger.setLevel(logging.DEBUG)
+
+"""Initialize application services"""
+logger.info("Initializing application services")
+settings = get_settings()
+
+os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
+db_store.init_db(str(settings.MONGODB_DSN))
 
 app = FastAPI()
 

@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.idea/
 # C extensions
 *.so
 
@@ -133,3 +134,5 @@ node_modules/
 # ui stuff
 
 ui/.next/
+ui/.DS_Store
+.DS_Store
