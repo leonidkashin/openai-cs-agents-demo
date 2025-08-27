@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AgentPanel } from "@/components/agent-panel";
-import { Chat } from "@/components/chat";
-import type { Agent, AgentEvent, GuardrailCheck, Message } from "@/lib/types";
+import { Chat } from "@/components/Chat";
+import type { Agent, AgentEvent, GuardrailCheck, OutputGuardrailCheck, Message } from "@/lib/types";
 import { callChatAPI } from "@/lib/api";
 
 export default function Home() {
@@ -12,6 +12,7 @@ export default function Home() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string>("");
   const [guardrails, setGuardrails] = useState<GuardrailCheck[]>([]);
+  const [outputGuardrails, setOutputGuardrails] = useState<OutputGuardrailCheck[]>([]);
   const [context, setContext] = useState<Record<string, any>>({});
   const [conversationId, setConversationId] = useState<string | null>(null);
   // Loading state while awaiting assistant response
@@ -31,6 +32,7 @@ export default function Home() {
       setEvents(initialEvents);
       setAgents(data.agents || []);
       setGuardrails(data.guardrails || []);
+      setOutputGuardrails(data.output_guardrails || []);
       if (Array.isArray(data.messages)) {
         setMessages(
           data.messages.map((m: any) => ({
@@ -72,6 +74,7 @@ export default function Home() {
     if (data.agents) setAgents(data.agents);
     // Update guardrails state
     if (data.guardrails) setGuardrails(data.guardrails);
+    if (data.output_guardrails) setOutputGuardrails(data.output_guardrails);
 
     if (data.messages) {
       const responses: Message[] = data.messages.map((m: any) => ({
@@ -94,6 +97,7 @@ export default function Home() {
         currentAgent={currentAgent}
         events={events}
         guardrails={guardrails}
+        outputGuardrails={outputGuardrails}
         context={context}
       />
       <Chat

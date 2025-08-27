@@ -1,7 +1,7 @@
 "use client";
 
 import { Bot } from "lucide-react";
-import type { Agent, AgentEvent, GuardrailCheck } from "@/lib/types";
+import type { Agent, AgentEvent, GuardrailCheck, OutputGuardrailCheck } from "@/lib/types";
 import { AgentsList } from "./agents-list";
 import { Guardrails } from "./guardrails";
 import { ConversationContext } from "./conversation-context";
@@ -12,6 +12,7 @@ interface AgentPanelProps {
   currentAgent: string;
   events: AgentEvent[];
   guardrails: GuardrailCheck[];
+  outputGuardrails: OutputGuardrailCheck[];
   context: {
     passenger_name?: string;
     confirmation_number?: string;
@@ -26,6 +27,7 @@ export function AgentPanel({
   currentAgent,
   events,
   guardrails,
+  outputGuardrails,
   context,
 }: AgentPanelProps) {
   const activeAgent = agents.find((a) => a.name === currentAgent);
@@ -46,9 +48,11 @@ export function AgentPanel({
         <Guardrails
           guardrails={guardrails}
           inputGuardrails={activeAgent?.input_guardrails ?? []}
+          outputGuardrails={outputGuardrails}
+          outputGuardrailNames={activeAgent?.output_guardrails ?? []}
         />
         <ConversationContext context={context} />
-        <RunnerOutput runnerEvents={runnerEvents} />
+        <RunnerOutput runnerEvents={runnerEvents} outputGuardrails={outputGuardrails} />
       </div>
     </div>
   );

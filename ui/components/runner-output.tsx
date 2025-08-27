@@ -2,7 +2,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { AgentEvent } from "@/lib/types";
+import type { AgentEvent, OutputGuardrailCheck } from "@/lib/types";
 import {
   ArrowRightLeft,
   Wrench,
@@ -14,6 +14,7 @@ import { PanelSection } from "./panel-section";
 
 interface RunnerOutputProps {
   runnerEvents: AgentEvent[];
+  outputGuardrails: OutputGuardrailCheck[];
 }
 
 function formatEventName(type: string) {
@@ -125,43 +126,76 @@ function TimeBadge({ timestamp }: { timestamp: Date }) {
   );
 }
 
-export function RunnerOutput({ runnerEvents }: RunnerOutputProps) {
+export function RunnerOutput({ runnerEvents, outputGuardrails }: RunnerOutputProps) {
   return (
     <div className="flex-1 overflow-hidden">
       <PanelSection title="Runner Output" icon={<MessageSquareMore className="h-4 w-4 text-blue-600" />}>
         <ScrollArea className="h-[calc(100%-2rem)] rounded-md border border-gray-200 bg-gray-100 shadow-sm">
         <div className="p-4 space-y-3">
-          {runnerEvents.length === 0 ? (
+          {runnerEvents.length === 0 && outputGuardrails.length === 0 ? (
             <p className="text-center text-zinc-500 p-4">
               No runner events yet
             </p>
           ) : (
-            runnerEvents.map((event) => (
-              <Card
-                key={event.id}
-                className="border border-gray-200 bg-white shadow-sm rounded-lg"
-              >
-                <CardHeader className="flex flex-row justify-between items-center p-4">
-                  <span className="font-medium text-gray-800 text-sm">
-                    {event.agent}
-                  </span>
-                  <TimeBadge timestamp={event.timestamp} />
-                </CardHeader>
+            <>
+              {runnerEvents.map((event) => (
+                <Card
+                  key={event.id}
+                  className="border border-gray-200 bg-white shadow-sm rounded-lg"
+                >
+                  <CardHeader className="flex flex-row justify-between items-center p-4">
+                    <span className="font-medium text-gray-800 text-sm">
+                      {event.agent}
+                    </span>
+                    <TimeBadge timestamp={event.timestamp} />
+                  </CardHeader>
 
-                <CardContent className="flex items-start gap-3 p-4">
-                  <div className="rounded-full p-2 bg-gray-100 flex items-center gap-2">
-                    <EventIcon type={event.type} />
-                    <div className="text-xs text-gray-600">
-                      {formatEventName(event.type)}
+                  <CardContent className="flex items-start gap-3 p-4">
+                    <div className="rounded-full p-2 bg-gray-100 flex items-center gap-2">
+                      <EventIcon type={event.type} />
+                      <div className="text-xs text-gray-600">
+                        {formatEventName(event.type)}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex-1">
-                    <EventDetails event={event} />
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                    <div className="flex-1">
+                      <EventDetails event={event} />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {outputGuardrails.filter(gr => gr.input_text && gr.final_text).map((guardrail) => (
+                <Card
+                  key={guardrail.id}
+                  className="border border-blue-200 bg-blue-50 shadow-sm rounded-lg"
+                >
+                  <CardHeader className="flex flex-row justify-between items-center p-4">
+                    <span className="font-medium text-blue-800 text-sm">
+                      Output Guardrail: {guardrail.name}
+                    </span>
+                    <TimeBadge timestamp={guardrail.timestamp} />
+                  </CardHeader>
+
+                  <CardContent className="p-4 space-y-3">
+                    <div className="border border-blue-100 text-xs p-2.5 rounded-md flex flex-col gap-2">
+                      <div>
+                        <span className="text-blue-700 font-medium">Input Text:</span>
+                        <div className="mt-1 text-blue-600 bg-white p-2 rounded border">
+                          {guardrail.input_text}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-blue-700 font-medium">Final Text:</span>
+                        <div className="mt-1 text-blue-600 bg-white p-2 rounded border">
+                          {guardrail.final_text}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </>
           )}
         </div>
         </ScrollArea>

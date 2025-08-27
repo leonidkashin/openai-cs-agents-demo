@@ -4,6 +4,7 @@ import random
 from pydantic import BaseModel
 import string
 
+# noinspection PyPackageRequirements
 from agents import (
     Agent,
     RunContextWrapper,
@@ -13,7 +14,9 @@ from agents import (
     handoff,
     GuardrailFunctionOutput,
     input_guardrail,
+    output_guardrail
 )
+# noinspection PyPackageRequirements
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 # =========================
@@ -178,6 +181,72 @@ async def jailbreak_guardrail(
     return GuardrailFunctionOutput(output_info=final, tripwire_triggered=not final.is_safe)
 
 # =========================
+# OUTPUT GUARDRAILS
+# =========================
+
+class TovOutput(BaseModel):
+    """Schema for Tone of Voice guardrail output."""
+    reasoning: str
+    input_text: str
+    final_text: str
+
+output_guardrail_agent = Agent(
+    model="gpt-4.1",
+    name="Tone of Voice Guardrail",
+    instructions=("""
+    # Исправь текст в соответствии с Общим описанием твоей роли:
+Ты умный молодой парень продавец-консультант Иван в онлайн-магазине электроники restore:, https://www.re-store.ru. Используй только такое написание restore: — название маленькими латинскими буквами с двоеточием на конце.
+
+Всегда завершай своё сообщение вопросом, после ответа на вопросы пользователя, КРОМЕ случаев, когда пользователь явно завершает разговор.
+Используй только кавычки-ёлочки, «», вместо любых других.
+В нужных местах используй длинное тире —.
+Никогда не используй разметку markdown, только plain text. Структурируй текст только с помощью отступов и перехода на другую строку.
+Никогда не используй слово "помощь", только "полезность".
+Во всех случаях используйте написание Яндекс Сплит только в этой форме — Яндекс Сплит.
+При показе ссылок удаляем 'https://' и 'http://'
+
+Использование эмодзи:
+Используй эмодзи умеренно (в 20-30% сообщений) для выделения важных моментов. Применяй эмодзи только в следующих случаях:
+1. При упоминании конкретных товаров (🧦🧢👟🥾🎒👕🧤🩳)
+2. При выражении позитивных эмоций (😄😊🙂😉😎)
+3. При поздравлении с удачной покупкой (👍🙌👏)
+4. При описании преимуществ товара (✨💪)
+
+    """
+    ),
+    output_type=TovOutput,
+)
+
+@output_guardrail(name="Tone of Voice Guardrail")
+async def tov_guardrail(
+        context: RunContextWrapper[None],
+        agent: Agent,
+        output: "MessageOutput"
+) -> GuardrailFunctionOutput:
+    """Guardrail to format the output as tone of voice."""
+    # Передаём в помощника именно текст ответа.
+    # Output может быть либо строкой, либо объектом с полем .response/.final_text.
+    try:
+        if isinstance(output, str):
+            text = output
+        else:
+            text = getattr(output, "response", None) or getattr(output, "final_text", None)
+            if text is None:
+                text = str(output)
+    except Exception:
+        text = str(output)
+
+    result = await Runner.run(output_guardrail_agent, text, context=context.context)
+    final = result.final_output_as(TovOutput)
+    # Append approval marker to the final text
+    try:
+        final.final_text = f"{final.final_text}\nTone of Voice Guardrail — APPROVED"
+    except Exception:
+        pass
+    # Это форматирующий guardrail: не блокируем ответ.
+    return GuardrailFunctionOutput(output_info=final, tripwire_triggered=False)
+
+# =========================
 # AGENTS
 # =========================
 
@@ -204,6 +273,7 @@ seat_booking_agent = Agent[AirlineAgentContext](
     instructions=seat_booking_instructions,
     tools=[update_seat, display_seat_map],
     input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+    output_guardrails=[tov_guardrail],
 )
 
 def flight_status_instructions(
@@ -228,6 +298,7 @@ flight_status_agent = Agent[AirlineAgentContext](
     instructions=flight_status_instructions,
     tools=[flight_status_tool],
     input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+    output_guardrails=[tov_guardrail],
 )
 
 # Cancellation tool and agent
@@ -276,6 +347,7 @@ cancellation_agent = Agent[AirlineAgentContext](
     instructions=cancellation_instructions,
     tools=[cancel_flight],
     input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+    output_guardrails=[tov_guardrail],
 )
 
 faq_agent = Agent[AirlineAgentContext](
@@ -290,6 +362,7 @@ faq_agent = Agent[AirlineAgentContext](
     3. Respond to the customer with the answer""",
     tools=[faq_lookup_tool],
     input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+    output_guardrails=[tov_guardrail],
 )
 
 triage_agent = Agent[AirlineAgentContext](
@@ -307,6 +380,7 @@ triage_agent = Agent[AirlineAgentContext](
         handoff(agent=seat_booking_agent, on_handoff=on_seat_booking_handoff),
     ],
     input_guardrails=[relevance_guardrail, jailbreak_guardrail],
+    output_guardrails=[tov_guardrail],
 )
 
 # Set up handoff relationships
